@@ -1,5 +1,7 @@
 import sys
 import os
+import argparse
+import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "modules")))
 
 from modules.story_generator import generate_story
@@ -7,65 +9,73 @@ from modules.illustration_generator import generate_illustrations
 from modules.text_placer import place_text_on_images
 from modules.epub_assembler import assemble_epub
 from modules.cover_creator import create_cover_pages
-from modules.sketch_to_prompt_generator import sketch_to_prompt_dict
-
-def get_user_input():
-    """Get user input for title, subtitle, author name, and optional guidance."""
-    title = input("Enter the book title: ")
-    subtitle = input("Enter the story theme (subtitle): ")
-    author_name = input("Enter the author name: ")
-    guidance = input("Enter any additional guidance (optional): ")
-    return title, subtitle, author_name, guidance
 
 def main():
-    # Step 1: Get user input
-    title, subtitle, author_name, guidance = get_user_input()
+    """Main function to generate a children's book EPUB.
+    
+    Sample JSON config:
+    {
+        "title": "My Book",
+        "subtitle": "Sunny Tundra Adventure",
+        "author_name": "Jane Doe",
+        "guidance": "Use warm colors.",
+        "sketch_map": {
+            "cover1": { "path": "sketches/cover1.png", "pages": [1] },
+            "cover2": { "path": "sketches/cover2.png", "pages": [2] },
+            "sketch1": { "path": "sketches/sk1.png", "pages": [3,4,5,6] },
+            "sketch2": { "path": "sketches/sk2.png", "pages": [7,8,9,10] },
+            "sketch3": { "path": "sketches/sk3.png", "pages": [11,12,13,14,15] }
+        }
+    }
 
-    # Step 1.5: Optional sketch layout guidance from up to 5 sketches
-    use_sketch = input("Do you want to include 1–5 sketch images as layout guidance? (y/n): ").strip().lower()
-    sketch_prompts_dict = {}
+    Run with:
+        make run CONFIG=config/book_config.json SKETCH_DIR=sketches/, or
+        make run CONFIG=config/book_config.json SKETCH_DIR=""
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, required=True, help="Path to JSON config")
+    parser.add_argument("--sketch_dir", type=str, default="", help="Folder containing sketch images")
+    args = parser.parse_args()
 
-    if use_sketch == "y":
-        max_sketches = 5
-        try:
-            num_sketches = int(input("How many sketches do you want to use? (1–5): ").strip())
-            if not (1 <= num_sketches <= max_sketches):
-                raise ValueError
-        except ValueError:
-            print(f"Invalid number. Defaulting to 1 sketch.")
-            num_sketches = 1
+    # Load config file
+    with open(args.config, "r") as f:
+        config = json.load(f)
 
-        labeled_inputs = []
-        for i in range(num_sketches):
-            print(f"\n--- Sketch {i+1} ---")
-            label = input("Label this sketch (e.g., 'scene1', 'layout2'): ").strip()
-            path = input("Enter the path to your sketch image: ").strip()
-            sketch_type = input("Describe the sketch type (e.g., room, street, landscape): ").strip()
-            labeled_inputs.append((label, path, sketch_type))
+    title = config["title"]
+    subtitle = config["subtitle"]
+    author_name = config["author_name"]
+    story_theme = config["story_theme"] 
+    guidance = config.get("guidance", "")
+    sketch_map_raw = config.get("sketch_map", {})
 
-        sketch_prompts_dict = sketch_to_prompt_dict(labeled_inputs)
+    # Build sketch_map by prepending sketch_dir to file paths (if sketch_dir is provided)
+    sketch_map = {}
+    if args.sketch_dir:
+        for label, val in sketch_map_raw.items():
+            updated_path = os.path.join(args.sketch_dir, os.path.basename(val["path"]))
+            sketch_map[label] = {"path": updated_path, "pages": val["pages"]}
+    else:
+        sketch_map = {}
 
-        # Combine all prompts into one guidance string
-        combined_guidance = "\n".join([f"[{label}] {prompt}" for label, prompt in sketch_prompts_dict.items()])
+    # Step 1: Generate story sentences, 
+    # using: generate_story(story_theme, guidance, author_name, model="gemma-2b")
+    story_sentences, page_descriptions, cover_description_1, cover_description_2 = \
+        generate_story(story_theme, guidance, author_name=author_name)
 
-        if guidance:
-            guidance += "\n" + combined_guidance
-        else:
-            guidance = combined_guidance
+    # Step 2: Generate illustrations using SDXL + ControlNet
+    illustrations = generate_illustrations(
+        [cover_description_1, cover_description_2] + page_descriptions,
+        model="huggingface-SDXL",
+        sketch_map=sketch_map
+    )
 
-    # Step 2: Generate story sentences using combined guidance
-    story_sentences = generate_story(subtitle, guidance)
-
-    # Step 3: Generate illustrations
-    illustrations = generate_illustrations(story_sentences)
-
-    # Step 4: Place text on images
+    # Step 3: Place text on images
     pages = place_text_on_images(story_sentences, illustrations)
 
-    # Step 5: Create cover pages
-    cover_page, secondary_cover_page = create_cover_pages(title, author_name, subtitle, illustrations[0])
+    # Step 4: Create cover pages
+    cover_page, secondary_cover_page = create_cover_pages(title, author_name, subtitle)
 
-    # Step 6: Assemble EPUB
+    # Step 5: Assemble EPUB
     assemble_epub(pages, cover_page, secondary_cover_page, author_name)
 
 if __name__ == "__main__":

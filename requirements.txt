@@ -7,4 +7,9 @@ replicate
 groq
 torch
 transformers
-
+diffusers
+accelerate
+safetensors
+opencv-python
+ruff
+argparse

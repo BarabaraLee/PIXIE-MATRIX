@@ -1,64 +1,52 @@
 import unittest
-import os
-import openai
-from unittest.mock import patch, Mock
+from unittest.mock import patch, MagicMock
+import numpy as np
+from PIL import Image
 from src.modules.illustration_generator import generate_illustrations
 
-# Suppress urllib3 warnings about OpenSSL compatibility
-# warnings.filterwarnings("ignore", category=UserWarning, module="urllib3")
+class TestIllustrationGenerator(unittest.TestCase):
 
-class TestGenerateIllustrations(unittest.TestCase):
-
-    @patch("openai.Image.create")
-    def test_generate_illustrations_dalle(self, mock_image_create):
-        """Test if generate_illustrations works with DALL·E model."""
-        story_sentences = [
-            "A playful bear cub in a sunny tundra with an Arctic fox.",
-            "The musk ox calf and snowy owl chick join the fun.",
-            "The snowshoe hare hops around happily."
-        ]
-
-        # Mock the response from openai.Image.create
-        mock_image_create.return_value = {
-            'data': [{'url': 'http://example.com/fake_image.jpg'}]
+    @patch('src.modules.illustration_generator.openai.Image.create')
+    def test_generate_illustrations_dalle(self, mock_openai_create):
+        mock_openai_create.return_value = {
+            'data': [{'url': 'https://fakeurl.com/image.png'}]
         }
 
-        illustrations = generate_illustrations(story_sentences, model="dall-e-3")
-        self.assertEqual(len(illustrations), len(story_sentences))
-        for url in illustrations:
-            self.assertTrue(url.startswith("http"))
+        sentences = ["Benny Bear wakes up happily.", "Benny Bear meets Finn Fox."]
 
-        self.assertEqual(mock_image_create.call_count, len(story_sentences))
+        result = generate_illustrations(sentences, model="dall-e-3")
 
-    @patch("requests.post")
-    def test_generate_illustrations_huggingface_sdxl(self, mock_post):
-        """Test if generate_illustrations works with Hugging Face SDXL model."""
-        story_sentences = [
-            "A tiny frog sits on a lily pad in a peaceful pond.",
-            "A duckling waddles through a field of wildflowers."
-        ]
+        self.assertEqual(len(result), 2)
+        self.assertTrue(all(url == 'https://fakeurl.com/image.png' for url in result))
 
-        # Set up mock response object
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.content = b'FAKE_IMAGE_BYTES'
-        mock_post.return_value = mock_response
+    @patch('src.modules.illustration_generator.cv2.imread')
+    @patch('src.modules.illustration_generator.cv2.Canny')
+    @patch('src.modules.illustration_generator.StableDiffusionControlNetPipeline.from_pretrained')
+    @patch('src.modules.illustration_generator.ControlNetModel.from_pretrained')
+    def test_generate_illustrations_sdxl(
+        self, mock_controlnet, mock_pipeline, mock_canny, mock_imread
+    ):
+        # Mock cv2.imread to return a fake numpy array image
+        mock_imread.return_value = np.ones((512, 512, 3), dtype=np.uint8) * 255
+        # Mock cv2.Canny to return a fake edge-detected image
+        mock_canny.return_value = np.ones((512, 512), dtype=np.uint8) * 255
 
-        # Create a temporary API token for the test
-        os.environ["HUGGINGFACE_API_TOKEN"] = "hf_fake_token_for_testing"
+        mock_pipe_instance = MagicMock()
+        mock_image = MagicMock(spec=Image.Image)
+        mock_pipe_instance.return_value.images = [mock_image]
+        mock_pipeline.return_value.to.return_value = mock_pipe_instance
 
-        illustrations = generate_illustrations(story_sentences, model="huggingface-SDXL")
-        self.assertEqual(len(illustrations), len(story_sentences))
-        for file in illustrations:
-            self.assertTrue(file.endswith(".png"))
-            self.assertTrue(os.path.exists(file))
+        sentences = ["Benny Bear plays with Finn Fox.", "Benny Bear naps in the meadow."]
+        sketch_map = {
+            "sketch1": {"path": "path/to/sketch1.png", "pages": [1]},
+        }
 
-        # Cleanup generated test files
-        for file in illustrations:
-            if os.path.exists(file):
-                os.remove(file)
+        result = generate_illustrations(sentences, model="huggingface-SDXL", sketch_map=sketch_map)
 
-        self.assertEqual(mock_post.call_count, len(story_sentences))
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], "page_01_sdxl.png")
+        self.assertEqual(result[1], "page_02_sdxl.png")
+        self.assertTrue(mock_image.save.called)
 
 if __name__ == "__main__":
     unittest.main()
