@@ -1,12 +1,12 @@
 """
 Original Prompt:
-I want to create a agentic system which automatically creates toddler book, starting with a 1 story theme and story context theme (such as rainforest cute animal, mermainds in deep sea, frog in pond, ducks, etc,） (with or without additional inserted real life anecdotes, pictures, or some other requirements for guidance). what is the suggested promp for creating the agentic system in order to complete the following steps: (1) create 1 or 2 sentences for 16 pages given the story theme provided by user; (2) according to the story context, generate 16 pages (portrait layout good for EPUB format for pulishing on Apple Ebook book store); (3) put the texts on to each page so that it is easy to read for kids or kids' parents (from iphone, ipad or mac); (4) assemble the pages (with texts attached) together (using Pages or whatever other method) and generate EPUB format of book. (5) Create cover page that can catch eyes of parents or kids from kids book category, inlcude author name as provided. (6) create a second cover page with single background (warm and cute color) with main charater on the right bottom corner of the page, and words such as "Author: {author name}" on the left center. Beneath author line, add "Illustrated by: {author name}, assisted by GenAI".  Please create such an agentic ai system. 
+I want to create a agentic system which automatically creates toddler book, starting with a 1 story theme and story context theme (such as rainforest cute animal, mermainds in deep sea, frog in pond, ducks, etc,） (with or without additional inserted real life anecdotes, pictures, or some other requirements for guidance). what is the suggested promp for creating the agentic system in order to complete the following steps: (1) create 1 or 2 sentences for 15 pages given the story theme provided by user; (2) according to the story context, generate 15 pages (portrait layout good for EPUB format for pulishing on Apple Ebook book store); (3) put the texts on to each page so that it is easy to read for kids or kids' parents (from iphone, ipad or mac); (4) assemble the pages (with texts attached) together (using Pages or whatever other method) and generate EPUB format of book. (5) Create cover page that can catch eyes of parents or kids from kids book category, inlcude author name as provided. (6) create a second cover page with single background (warm and cute color) with main charater on the right bottom corner of the page, and words such as "Author: {author name}" on the left center. Beneath author line, add "Illustrated by: {author name}, assisted by GenAI".  Please create such an agentic ai system. 
 
 Answer:
 Answer in chat instead
 ✅ I've created a Python-based agentic system called agentic_toddlerbook_creator that performs the full pipeline you described:
 
-Generates 16 short story sentences from a user-supplied theme
+Generates 15 short story sentences from a user-supplied theme
 
 Creates portrait-oriented illustrations for each page using DALL·E
 
@@ -35,8 +35,8 @@ Would you like me to help you set this up in your VS Code project or generate a 
 """
 Agentic AI System for Automatically Generating Toddler Books from a Story Theme
 Steps:
-1. Generate 16-sentence story text from a given story theme.
-2. Generate 16 consistent illustrations in portrait layout.
+1. Generate 15-sentence story text from a given story theme.
+2. Generate 15 consistent illustrations in portrait layout.
 3. Overlay text on images in a kid-friendly format.
 4. Assemble pages into an EPUB book.
 5. Create a front cover and a secondary author/illustrator credit page.
@@ -56,7 +56,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # =========================
 def generate_story_sentences(theme):
     prompt = (
-        f"Create a 16-sentence toddler story, 1-2 sentences per page, based on the theme: '{theme}'. "
+        f"Create a 15-sentence toddler story, 1-2 sentences per page, based on the theme: '{theme}'. "
         "Ensure it is simple, imaginative, and engaging for kids aged 2-5."
     )
     response = openai.chat.completions.create(

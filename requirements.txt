@@ -1,0 +1,10 @@
+openai
+pillow
+requests
+ebooklib
+python-dotenv
+replicate
+groq
+torch
+transformers
+

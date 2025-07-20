@@ -1,5 +1,5 @@
 #!/bin/sh
-'''exec' "/Users/linjunli/Desktop/10 great ways to treat others/pixie-press/env/bin/python3" "$0" "$@"
+'''exec' "/Users/linjunli/Desktop/10 great ways to treat others/pixie-matrix/env/bin/python3.13" "$0" "$@"
 ' '''
 # -*- coding: utf-8 -*-
 import re
