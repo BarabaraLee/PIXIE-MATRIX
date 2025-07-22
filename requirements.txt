@@ -13,3 +13,4 @@ safetensors
 opencv-python
 ruff
 argparse
+torchvision
