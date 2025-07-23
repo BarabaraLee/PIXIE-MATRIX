@@ -2,6 +2,12 @@
 """Module to create main and secondary cover pages with custom layout."""
 
 from PIL import Image, ImageDraw, ImageFont
+from transformers.utils import logging
+from constants import HEIGHT, WIDTH
+
+
+logging.set_verbosity_info()
+logger = logging.get_logger(__name__)
 
 def get_text_size(text, font):
     """
@@ -16,9 +22,8 @@ def get_text_size(text, font):
 def create_cover_pages(title, author_name, subtitle):
     """Create the main cover page and secondary cover page with custom layout."""
     # Define image size
-    width, height = 1024, 1536
-    print(f"Creating cover pages with size: {width}x{height}")
-    print("Pasting resized character image at", (width - 260, height - 260))
+    logger.info(f"Creating cover pages with size: {WIDTH}x{HEIGHT}")
+    logger.info("Pasting resized character image at", (WIDTH - 260, HEIGHT - 260))
 
     # Load default fonts (fallback if custom font is unavailable)
     font_path = "/System/Library/Fonts/Supplemental/Arial.ttf"
@@ -27,29 +32,29 @@ def create_cover_pages(title, author_name, subtitle):
         subtitle_font = ImageFont.truetype(font_path, 48)
         author_font = ImageFont.truetype(font_path, 32)
     except Exception as e:
-        print(f"Error loading fonts: {e}, loading default font now.")
+        logger.info(f"Error loading fonts: {e}, loading default font now.")
         title_font = ImageFont.load_default()
         subtitle_font = ImageFont.load_default()
         author_font = ImageFont.load_default()
 
     # === Main Cover Page ===
-    cover_page = Image.new('RGB', (width, height), color=(255, 200, 200))
+    cover_page = Image.new('RGB', (WIDTH, HEIGHT), color=(255, 200, 200))
     draw = ImageDraw.Draw(cover_page)
 
     # Center title and subtitle at the top
     title_w, title_h = get_text_size(title, title_font)
     subtitle_w, subtitle_h = get_text_size(subtitle, subtitle_font)
 
-    draw.text(((width - title_w) / 2, 120), title, fill=(0, 0, 0), font=title_font)
-    draw.text(((width - subtitle_w) / 2, 120 + title_h + 30), subtitle, fill=(0, 0, 0), font=subtitle_font)
+    draw.text(((WIDTH - title_w) / 2, 120), title, fill=(0, 0, 0), font=title_font)
+    draw.text(((WIDTH - subtitle_w) / 2, 120 + title_h + 30), subtitle, fill=(0, 0, 0), font=subtitle_font)
 
     # Author at bottom center
     author_text = f"Author: {author_name}"
     author_w, author_h = get_text_size(author_text, author_font)
-    draw.text(((width - author_w) / 2, height - author_h - 100), author_text, fill=(0, 0, 0), font=author_font)
+    draw.text(((WIDTH - author_w) / 2, HEIGHT - author_h - 100), author_text, fill=(0, 0, 0), font=author_font)
 
     # === Secondary Cover Page ===
-    secondary_cover_page = Image.new('RGB', (width, height), color=(255, 230, 230))
+    secondary_cover_page = Image.new('RGB', (WIDTH, HEIGHT), color=(255, 230, 230))
     draw2 = ImageDraw.Draw(secondary_cover_page)
 
     # Author & illustrator on left half

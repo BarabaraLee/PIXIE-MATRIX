@@ -5,23 +5,28 @@ import torch
 import re
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
+from transformers.utils import logging
+
+logging.set_verbosity_info()
+logger = logging.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-torch.set_default_dtype(torch.float16)  
+
+MAX_NEW_OUTPUT_TOKENS = 4096  # Maximum tokens for model output
 
 # === Utility ===
 # def extract_json_objects(content: str) -> list | dict:
 #     """
 #     Extracts and returns the valid JSON array or object found in markdown ```json code blocks.
 #     """
-#     print("Looking for ```json blocks...")
+#     logger.info("Looking for ```json blocks...")
 #     matches = re.findall(r"```json\s*(\{.*?\}|\[.*?\])\s*```", content, re.DOTALL)
 
 #     if not matches:
 #         raise ValueError("No valid JSON block found in the content.")
 
-#     print(f"Found {len(matches)} JSON block(s).")
+#     logger.info(f"Found {len(matches)} JSON block(s).")
 #     res_lst = []
 #     for block in matches:
 #         cleaned = re.sub(r",\s*(\}|\])", r"\1", block.strip())  # ✅ remove trailing commas
@@ -29,7 +34,7 @@ torch.set_default_dtype(torch.float16)
 #             parsed = json.loads(cleaned)
 #             res_lst.append(parsed)
 #         except json.JSONDecodeError as e:
-#             print("⚠️ Skipping malformed block:\n", block[:300], "\n", str(e))
+#             logger.info("⚠️ Skipping malformed block:\n", block[:300], "\n", str(e))
 
 #     if not res_lst:
 #         raise ValueError("All JSON blocks failed to parse.")
@@ -41,7 +46,7 @@ def extract_pagewise_json_objects(content: str) -> list:
     Extracts all individual JSON objects wrapped in ```json code blocks (per-page format)
     and returns them as a list of dictionaries.
     """
-    print("Looking for individual ```json { ... } ``` blocks...")
+    logger.info("Looking for individual ```json { ... } ``` blocks...")
     
     # Match each JSON object inside a ```json code block
     matches = re.findall(r"```json\s*({.*?})\s*```", content, re.DOTALL)
@@ -61,13 +66,13 @@ def extract_pagewise_json_objects(content: str) -> list:
             parsed = json.loads(cleaned)
             results.append(parsed)
         except json.JSONDecodeError as e:
-            print(f"⚠️ Skipping malformed block #{i}:\n{block[:300]}\nError: {e}")
+            logger.info(f"⚠️ Skipping malformed block #{i}:\n{block[:300]}\nError: {e}")
 
     if not results:
         raise ValueError("All JSON blocks failed to parse.")
 
-    print(f"✅ Successfully extracted {len(results)} JSON objects.")
-    print("Extracted object:\n", results if results else "None")
+    logger.info(f"✅ Successfully extracted {len(results)} JSON objects.")
+    logger.info("Extracted object:\n", results if results else "None")
     return results
 
 def extract_one_json_object(content: str) -> dict:
@@ -90,7 +95,7 @@ def extract_one_json_object(content: str) -> dict:
     Raises:
         ValueError: If no valid object is found or if parsing fails.
     """
-    print("Looking for ```json block with an object...")
+    logger.info("Looking for ```json block with an object...")
     matches = re.findall(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL)
 
     if not matches:
@@ -102,7 +107,7 @@ def extract_one_json_object(content: str) -> dict:
         if "{...}" not in match:
             block = match
             break
-    print("Raw extracted block:\n", block)
+    logger.info("Raw extracted block:\n", block)
 
     # Remove trailing commas before }
     cleaned = re.sub(r",\s*}", "}", block.strip())
@@ -159,7 +164,9 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
-                temperature=0.7,
+                temperature=0.7, 
+                top_p=0.95,         # samples from top 95% probability mass
+                max_new_tokens=MAX_NEW_OUTPUT_TOKENS,
             )
             return response.choices[0].message.content
 
@@ -167,9 +174,8 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
             input_ids = tokenizer(prompt, return_tensors="pt").to(model_gemma.device)
             outputs = model_gemma.generate(
                 **input_ids,
-                do_sample=False,
-                # temperature=0.7,
-                max_new_tokens=int(1024 * 2),
+                do_sample=False, # deterministic generation, greedy algorithm
+                max_new_tokens=MAX_NEW_OUTPUT_TOKENS,
                 repetition_penalty=1.1,
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id
@@ -216,6 +222,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     14 more objects like this (total 15)
     ]\n
     """
+    """Both "story_sentence" and "page_description" have max length of 65 tokens.\n"""
     "DO NOT include:\n"
     "- formatting examples or placeholder text\n"
     "- any ellipses like '...', or comments like '// more'\n"
@@ -230,7 +237,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     ]
 
     content = call_model(messages)
-    print("Model output (batch):\n", content)
+    logger.info("Model output (batch):\n", content)
 
     pages_data = extract_pagewise_json_objects(content)
 
@@ -240,7 +247,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     cleaned_pages = []
     for i, item in enumerate(pages_data):
         if "..." in item.get("story_sentence", "") or "..." in item.get("page_description", ""):
-            print(f"⚠️ Skipping page {i+1} due to placeholder: {item}")
+            logger.info(f"⚠️ Skipping page {i+1} due to placeholder: {item}")
             continue
         cleaned_pages.append(item)
 

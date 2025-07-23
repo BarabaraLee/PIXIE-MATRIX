@@ -1,6 +1,10 @@
 from ebooklib import epub
 from PIL import Image
 import io
+from transformers.utils import logging
+
+logging.set_verbosity_info()
+logger = logging.get_logger(__name__)
 
 def image_to_bytes(img: Image.Image) -> bytes:
     buffer = io.BytesIO()
@@ -64,4 +68,4 @@ def assemble_epub(pages, cover_page, secondary_cover_page, author_name):
 
     # Write to file
     epub.write_epub("toddler_book.epub", book)
-    print("EPUB file 'toddler_book.epub' created successfully.")
+    logger.info("EPUB file 'toddler_book.epub' created successfully.")
