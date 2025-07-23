@@ -2,12 +2,11 @@
 """Module to create main and secondary cover pages with custom layout."""
 
 from PIL import Image, ImageDraw, ImageFont
-from transformers.utils import logging
 from constants import HEIGHT, WIDTH
+import logging
 
-
-logging.set_verbosity_info()
-logger = logging.get_logger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def get_text_size(text, font):
     """
@@ -23,7 +22,7 @@ def create_cover_pages(title, author_name, subtitle):
     """Create the main cover page and secondary cover page with custom layout."""
     # Define image size
     logger.info(f"Creating cover pages with size: {WIDTH}x{HEIGHT}")
-    logger.info("Pasting resized character image at", (WIDTH - 260, HEIGHT - 260))
+    logger.info(f"Pasting resized character image at {(WIDTH - 260, HEIGHT - 260)}")
 
     # Load default fonts (fallback if custom font is unavailable)
     font_path = "/System/Library/Fonts/Supplemental/Arial.ttf"

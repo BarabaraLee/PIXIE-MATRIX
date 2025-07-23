@@ -1,5 +1,5 @@
-HEIGHT = 768# 768 # 1536 
-WIDTH = 512 #`512 # 1024
+HEIGHT = 768 # 1536 
+WIDTH = 512 # 1024
 NUM_INF_STEPS = 40
 NUM_IMAGES = 1
 NEGATIVE_PROMPT = ("blurry, malformed face, bad anatomy, malformed limbs, extra or missing fingers / eyes / limbs, "

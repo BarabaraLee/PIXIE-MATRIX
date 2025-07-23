@@ -1,10 +1,11 @@
 from ebooklib import epub
 from PIL import Image
 import io
-from transformers.utils import logging
+import logging
+from utils import check_image_type
 
-logging.set_verbosity_info()
-logger = logging.get_logger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def image_to_bytes(img: Image.Image) -> bytes:
     buffer = io.BytesIO()
@@ -14,6 +15,11 @@ def image_to_bytes(img: Image.Image) -> bytes:
 def assemble_epub(pages, cover_page, secondary_cover_page, author_name):
     """Assemble the pages and cover into an EPUB file."""
     book = epub.EpubBook()
+
+    # convert first three arguments to image types
+    cover_page = check_image_type(cover_page)
+    secondary_cover_page = check_image_type(secondary_cover_page)
+    pages = [check_image_type(page) for page in pages]
 
     # Set metadata
     book.set_identifier("id123456")

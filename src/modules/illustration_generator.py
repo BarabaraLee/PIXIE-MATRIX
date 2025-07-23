@@ -10,11 +10,11 @@ import cv2
 import torch
 from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, StableDiffusionPipeline
 from transformers import AutoTokenizer
-from transformers.utils import logging
 from constants import HEIGHT, WIDTH, NUM_INF_STEPS, NUM_IMAGES, NEGATIVE_PROMPT, GUIDANCE_SCALE, IMAGE_STYLE
+import logging
 
-logging.set_verbosity_info()
-logger = logging.get_logger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()

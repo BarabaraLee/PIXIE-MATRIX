@@ -5,10 +5,10 @@ import torch
 import re
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
-from transformers.utils import logging
+import logging
 
-logging.set_verbosity_info()
-logger = logging.get_logger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -72,7 +72,7 @@ def extract_pagewise_json_objects(content: str) -> list:
         raise ValueError("All JSON blocks failed to parse.")
 
     logger.info(f"✅ Successfully extracted {len(results)} JSON objects.")
-    logger.info("Extracted object:\n", results if results else "None")
+    logger.info("Extracted object:\n" + (json.dumps(results, indent=2) if results else "[]"))
     return results
 
 def extract_one_json_object(content: str) -> dict:
@@ -107,7 +107,7 @@ def extract_one_json_object(content: str) -> dict:
         if "{...}" not in match:
             block = match
             break
-    logger.info("Raw extracted block:\n", block)
+    logger.info("Raw extracted block:\n" + block)
 
     # Remove trailing commas before }
     cleaned = re.sub(r",\s*}", "}", block.strip())
@@ -237,7 +237,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     ]
 
     content = call_model(messages)
-    logger.info("Model output (batch):\n", content)
+    logger.info("Model output (batch):\n" + content)
 
     pages_data = extract_pagewise_json_objects(content)
 

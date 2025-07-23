@@ -5,13 +5,24 @@
 
 # === Configurable Variables ===
 CONFIG=src/config/book_config.json
-PYTHON=python3
+SKETCH_DIR=
+INTERMEDIATE=src/intermediate_results/intermediate.json
 
 # === Application Execution ===
 
 # Run the storybook generator with optional sketch directory
-run:
-	$(PYTHON) src/main.py --config $(CONFIG) --sketch_dir "$(SKETCH_DIR)"
+.PHONY: run run-gen run-assemble
+
+# Run the full pipeline (default: phase=gen, then assemble)
+run: run-gen run-assemble
+
+# Run steps 1+2, saving to intermediate file
+run-gen:
+	python3 src/main.py --phase gen --config $(CONFIG) --sketch_dir "$(SKETCH_DIR)" --intermediate_file $(INTERMEDIATE)
+
+# Run steps 3+4+5, loading from intermediate file
+run-assemble:
+	python3 src/main.py --phase assemble --intermediate_file $(INTERMEDIATE)
 
 # === Unit Tests ===
 
