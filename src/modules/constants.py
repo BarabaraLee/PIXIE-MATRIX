@@ -1,7 +1,7 @@
 HEIGHT = 768 # 1536 
 WIDTH = 512 # 1024
 NUM_INF_STEPS = 40
-NUM_IMAGES = 1
+NUM_IMAGES = 4
 NEGATIVE_PROMPT = ("blurry, malformed face, bad anatomy, malformed limbs, extra or missing fingers / eyes / limbs, "
                     "cloned or twisted faces, poor proportions, unrealistic, photorealistic, creepy, "
                     "horror, nsfw, violent, animal-human hybrids, clothing on animals, glitches, watermarks, text, "

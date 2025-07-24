@@ -1,3 +1,4 @@
+from datetime import datetime
 import sys
 import os
 import argparse
@@ -108,4 +109,11 @@ def main():
         logger.info("EPUB assembled.")
 
 if __name__ == "__main__":
+    logger.info("Starting main script...")
+    start_time = datetime.now().date()
+    logger.info(f"Starting time: {start_time}")
     main()
+    end_time = datetime.now().date()
+    logger.info(f"Ending time: {end_time}")
+    logger.info("Main script finished.")
+    logger.info(f"Time taken: {end_time - start_time}")
