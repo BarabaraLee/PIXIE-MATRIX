@@ -2,7 +2,7 @@ from ebooklib import epub
 from PIL import Image
 import io
 import logging
-from utils import check_image_type
+from libs.utils import check_image_type
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

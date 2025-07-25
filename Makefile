@@ -4,25 +4,38 @@
 # or just "make run" if you don't have sketches
 
 # === Configurable Variables ===
+PYTHON=python3
 CONFIG=src/config/book_config.json
 SKETCH_DIR=
 INTERMEDIATE=src/intermediate_results/intermediate.json
 
-# === Application Execution ===
+# === Application Execution (New4-stage approach support)===
 
 # Run the storybook generator with optional sketch directory
-.PHONY: run run-gen run-assemble
+.PHONY: run run-characters run-story run-images run-assemble run-full-pipeline
 
-# Run the full pipeline (default: phase=gen, then assemble)
-run: run-gen run-assemble
+run-characters:
+	@echo " Stage 1: Character Generation"
+	$(PYTHON) src/character_generation/character_agent.py 
 
-# Run steps 1+2, saving to intermediate file
-run-gen:
-	python3 src/main.py --phase gen --config $(CONFIG) --sketch_dir "$(SKETCH_DIR)" --intermediate_file $(INTERMEDIATE)
+run-story:
+	@echo " Stage 2: Story Generation"
+	$(PYTHON) src/story_generation/story_agent.py 
 
-# Run steps 3+4+5, loading from intermediate file
+run-images:
+	@echo " Stage 3: Image Generation"
+	$(PYTHON) src/image_generation/character_aware_gen.py 
+
 run-assemble:
-	python3 src/main.py --phase assemble --intermediate_file $(INTERMEDIATE)
+	@echo "Stage 4: Book Assembly"
+	$(PYTHON) src/assembly/character_integration.py
+
+# === Application Execution (Lagacy 2-stage approach support)===
+run-gen:
+	$(PYTHON) src/main.py --phase gen --config $(CONFIG) --sketch_dir "$(SKETCH_DIR)" --intermediate_file $(INTERMEDIATE)
+
+# run-assemble:
+# 	$(PYTHON) src/main.py --phase assemble --intermediate_file $(INTERMEDIATE)
 
 # === Unit Tests ===
 
@@ -37,6 +50,10 @@ test-epub:
 test-story:
 	@echo "📖 Testing story generation..."
 	$(PYTHON) -m unittest tests/test_story_generator.py
+
+test-cover:
+	@echo "🖼️  Testing cover page generation..."
+	$(PYTHON) -m unittest tests/test_cover_creator.py
 
 # === Clean Up ===
 

@@ -2,7 +2,7 @@
 """Module to create main and secondary cover pages with custom layout."""
 
 from PIL import Image, ImageDraw, ImageFont
-from constants import HEIGHT, WIDTH
+from libs.constants import HEIGHT, WIDTH
 import logging
 
 logging.basicConfig(level=logging.INFO)

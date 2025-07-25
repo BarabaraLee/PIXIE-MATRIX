@@ -1,10 +1,10 @@
 from dotenv import load_dotenv
 import os
 import json
-import torch
 import re
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from openai import OpenAI
+from libs.constants import MAX_NEW_OUTPUT_TOKENS
+from libs.utils import get_gemma_tokenizer_n_model
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -13,33 +13,6 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-MAX_NEW_OUTPUT_TOKENS = 4096  # Maximum tokens for model output
-
-# === Utility ===
-# def extract_json_objects(content: str) -> list | dict:
-#     """
-#     Extracts and returns the valid JSON array or object found in markdown ```json code blocks.
-#     """
-#     logger.info("Looking for ```json blocks...")
-#     matches = re.findall(r"```json\s*(\{.*?\}|\[.*?\])\s*```", content, re.DOTALL)
-
-#     if not matches:
-#         raise ValueError("No valid JSON block found in the content.")
-
-#     logger.info(f"Found {len(matches)} JSON block(s).")
-#     res_lst = []
-#     for block in matches:
-#         cleaned = re.sub(r",\s*(\}|\])", r"\1", block.strip())  # ✅ remove trailing commas
-#         try:
-#             parsed = json.loads(cleaned)
-#             res_lst.append(parsed)
-#         except json.JSONDecodeError as e:
-#             logger.info("⚠️ Skipping malformed block:\n", block[:300], "\n", str(e))
-
-#     if not res_lst:
-#         raise ValueError("All JSON blocks failed to parse.")
-
-#     return res_lst[0] if len(res_lst) == 1 else res_lst
 
 def extract_pagewise_json_objects(content: str) -> list:
     """
@@ -126,17 +99,6 @@ def extract_one_json_object(content: str) -> dict:
     return parsed
 
 
-# === Load Gemma Model ===
-model_path = os.path.expanduser("~/.cache/huggingface/hub/models--google--gemma-2b-it/snapshots/96988410cbdaeb8d5093d1ebdc5a8fb563e02bad")
-tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-model_gemma = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    torch_dtype=torch.float16,
-    device_map="cpu",
-    local_files_only=True
-)
-
-
 # === Main Story Generator ===
 def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     story_sentences = []
@@ -171,6 +133,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
             return response.choices[0].message.content
 
         elif model == "gemma-2b":
+            tokenizer, model_gemma = get_gemma_tokenizer_n_model()
             input_ids = tokenizer(prompt, return_tensors="pt").to(model_gemma.device)
             outputs = model_gemma.generate(
                 **input_ids,

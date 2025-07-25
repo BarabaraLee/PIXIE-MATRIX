@@ -9,8 +9,7 @@ from PIL import Image
 import cv2
 import torch
 from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, StableDiffusionPipeline
-from transformers import AutoTokenizer
-from constants import HEIGHT, WIDTH, NUM_INF_STEPS, NUM_IMAGES, NEGATIVE_PROMPT, GUIDANCE_SCALE, IMAGE_STYLE
+from libs.constants import HEIGHT, WIDTH, NUM_INF_STEPS, NUM_IMAGES, NEGATIVE_PROMPT, GUIDANCE_SCALE, IMAGE_STYLE
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -27,21 +26,12 @@ def preprocess_sketch_for_controlnet(sketch_path):
     return Image.fromarray(image)
 
 def generate_prompt(sentence, style=IMAGE_STYLE, is_cover=False, title=""):
-    """Generate a prompt for the illustration model based on the sentence."""
+    """Generate a prompt for the illustration model based on the sentence. 
+    Token info is only logged, not used"""
     cover_addon = " for a cover page" if is_cover else ""
     cover_addon += f" including the main character - {title}"
     prompt = f"A colorful illustration for a toddler book{cover_addon} : {sentence} {style}"
-    model_path = os.path.expanduser("~/.cache/huggingface/hub/models--google--gemma-2b-it/snapshots/96988410cbdaeb8d5093d1ebdc5a8fb563e02bad")
-    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
 
-    # Tokenize and return token IDs
-    encoded = tokenizer(prompt, return_tensors="pt")
-
-    # Get token strings
-    tokens = tokenizer.convert_ids_to_tokens(encoded["input_ids"][0])
-
-    logger.info(f"\nNumber of tokens: {len(tokens)}")
-    logger.info(f"Tokens: {tokens}\n")
     return prompt
 
 def generate_illustrations(story_sentences, model="huggingface-SDXL", sketch_map=None, title=""):

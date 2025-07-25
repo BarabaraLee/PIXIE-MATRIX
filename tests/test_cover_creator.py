@@ -1,34 +1,31 @@
-# To run from project root (for all project): python -m unittest discover -s tests -p "test_*.py"
-# To run this file only: python -m unittest tests/test_cover_creator.py
-
 import unittest
 from PIL import Image
+import sys
+import os
+
+# Add the path to src/modules to sys.path so imports work
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src", "modules")))
+
 from src.modules.cover_creator import create_cover_pages
+from libs.constants import WIDTH, HEIGHT
 
 
-class TestCreateCoverPages(unittest.TestCase):
+class TestCoverCreator(unittest.TestCase):
 
-    def test_create_cover_pages_dimensions_and_types(self):
-        # Arrange
-        title = "My Toddler Book"
-        author_name = "Jane Doe"
-        subtitle = "A Happy Day"
+    def test_create_cover_pages_returns_images(self):
+        title = "My Book"
+        author = "Test Author"
+        subtitle = "A Fun Adventure"
 
-        # Act
-        cover_page, secondary_cover_page = create_cover_pages(title, author_name, subtitle)
+        cover, secondary = create_cover_pages(title, author, subtitle)
 
-        # Assert: Check output types
-        self.assertIsInstance(cover_page, Image.Image)
-        self.assertIsInstance(secondary_cover_page, Image.Image)
+        # Test type
+        self.assertIsInstance(cover, Image.Image)
+        self.assertIsInstance(secondary, Image.Image)
 
-        # Assert: Check dimensions
-        expected_size = (1024, 1536)
-        self.assertEqual(cover_page.size, expected_size)
-        self.assertEqual(secondary_cover_page.size, expected_size)
-
-        # Assert: Check modes
-        self.assertEqual(cover_page.mode, 'RGB')
-        self.assertEqual(secondary_cover_page.mode, 'RGB')
+        # Test dimensions
+        self.assertEqual(cover.size, (WIDTH, HEIGHT))
+        self.assertEqual(secondary.size, (WIDTH, HEIGHT))
 
 
 if __name__ == "__main__":

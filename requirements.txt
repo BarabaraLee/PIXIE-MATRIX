@@ -16,3 +16,5 @@ argparse
 torchvision
 ftfy 
 spacy
+protobuf
+tiktoken

@@ -1,8 +1,8 @@
 # text_placer.py
 """Module to place text on images for storybook pages."""
-from PIL import Image, ImageDraw, ImageFont
-from constants import HEIGHT, WIDTH
-from utils import check_image_type
+from PIL import ImageDraw, ImageFont
+from libs.constants import HEIGHT, WIDTH
+from libs.utils import check_image_type
 import logging
 
 logging.basicConfig(level=logging.INFO)
