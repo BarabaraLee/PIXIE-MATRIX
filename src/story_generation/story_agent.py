@@ -1,20 +1,14 @@
-"""
-Multi-version Story Generation for PIXIE-MATRIX
-
-Local run under mixie-matrix folder with: python3 -m src.story_generation.story_agent
-"""
-
 import json 
+from libs.constants import MAX_NEW_OUTPUT_TOKENS
 from libs.utils import get_gemma_tokenizer_n_model
-import openai 
 from pathlib import Path 
 from typing import List, Dict, Any 
-import os 
-import torch
-
+import re
+import os
+from datetime import datetime
 
 class PixieStoryAgent:
-    """Generate multiple story versions with chracter awareness"""
+    """Generate multiple story versions with character awareness"""
 
     def __init__(self, config_path: str="src/config/book_config.json"):
         self.config = self.load_config(config_path)
@@ -22,220 +16,292 @@ class PixieStoryAgent:
         self.output_dir = Path("src/intermediate_results/story_versions")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize LLM
         self.setup_llm(model=self.config["story_config"]["model"])
 
     def load_config(self, config_path: str) -> dict:
-        """Load configuration from a JSON file at the given path."""
         try: 
             with open(config_path, "r", encoding="utf-8") as f:
-                config_data = json.load(f)
-            return config_data
+                return json.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(f"Config file not found at path: {config_path}")
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON format in config file: {e}")
-        
-        
+
     def load_character_registry(self) -> List[Dict[str, Any]]:
-        """Load character registry from a JSON file"""
-        character_registry_path = Path("src/intermediate_results/character_registry.json")
-
-        if not character_registry_path.exists():
-            print(f"Character registry not found at {character_registry_path}")
+        path = Path("src/intermediate_results/character_registry.json")
+        if not path.exists():
+            print(f"Character registry not found at {path}")
             return []
-
-        try:
-            with open(character_registry_path, "r", encoding="utf-8") as f:
-                characters = json.load(f)
-            return characters
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Error parsing character registry JSON: {e}")
-        
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
     def setup_llm(self, model="Gemma-2b-it"):
-        """Setup language model for story generation"""
         print(" Generating story versions")
-
         if model == "Gemma-2b-it":
             self.tokenizer, self.text_generator = get_gemma_tokenizer_n_model()
             self.model = model 
-            self.use_openai = False 
-            
-        elif model=="gpt-3.5-turbo":
-            openai_key = os.getenv("OPEN_API_KEY")
-            openai.api_key = openai_key 
-            self.model = model 
-            self.use_openai = True 
-
+        else:
+            raise ValueError("Only Gemma-2b-it is supported in this version.")
         print(f"Used LLM: {model}")
 
+    
+    def extract_pagewise_json_objects(self, content: str) -> list:
+        """
+        Extracts all individual JSON objects wrapped in ```json code blocks (per-page format)
+        and returns them as a list of dictionaries.
+        """
+        print("Looking for individual ```json { ... } ``` blocks...")
+        
+        # Match each JSON object inside a ```json code block
+        matches = re.findall(r"```json\s*({.*?})\s*```", content, re.DOTALL)
 
-    def parse_page_response(self, content: str) -> Dict[str, Any]:
-        """Parse structured page output from Gemma"""
-        lines = content.strip().splitlines()
-        result = {"text": "", "image_desc": "", "characters": []}
+        if not matches:
+            raise ValueError("No valid JSON blocks found in the content.")
 
-        for line in lines:
-            if line.lower().startswith("story_text:"):
-                result["text"] = line.split(":", 1)[1].strip()
-            elif line.lower().startswith("image_desc:"):
-                result["image_desc"] = line.split(":", 1)[1].strip()
-            elif line.lower().startswith("characters:"):
-                chars = line.split(":", 1)[1].strip()
-                result["characters"] = [c.strip() for c in chars.split(",") if c.strip()]
+        results = []
+        for i, block in enumerate(matches, 1):
+            # Clean: remove trailing commas (if any)
+            cleaned = re.sub(r",\s*(\}|\])", r"\1", block.strip())
 
-        return result
+            # Ensure property names are quoted (defensive fix for LLMs)
+            cleaned = re.sub(r'(?<!")(\b\w+\b)(?=\s*:)', r'"\1"', cleaned)
 
+            try:
+                parsed = json.loads(cleaned)
+                results.append(parsed)
+            except json.JSONDecodeError as e:
+                print(f" Skipping malformed block #{i}:\n{block[:300]}\nError: {e}")
 
-    def generate_page_content(self, prompt: str, page_num: int) -> Dict[str, Any]:
-        """Generate story text, image description, and characters using local Gemma"""
-        if not self.text_generator or not self.tokenizer:
-            raise Exception("Gemma model or tokenizer not loaded.")
+        if not results:
+            raise ValueError("All JSON blocks failed to parse.")
 
-        full_prompt = f"""{prompt}
+        print(f" Successfully extracted {len(results)} JSON objects.")
+        print("Extracted object:\n" + (json.dumps(results, indent=2) if results else "[]"))
+        return results
+    
+    def extract_one_json_object(self, content: str) -> dict:
+        """
+        Extract and parse a single JSON object from a markdown ```json block.
 
-Write page {page_num} of the story.
+        Specifically designed for cover_prompt responses where the model is expected
+        to return one JSON object with cover_description_1 and cover_description_2 keys.
 
-Format your response *exactly* like this (no extra words):
+        Cleans common LLM formatting issues:
+        - Trailing commas before }.
+        - Unquoted keys.
 
-story_text: <one or two sentences of child-friendly story content>
-image_desc: <one sentence describing what to illustrate>
-characters: <comma-separated list of character names mentioned on this page>
+        Args:
+            content (str): The full LLM response string.
 
-Make sure:
-- All three fields are present
-- image_desc is unique and visually descriptive
-- characters field includes at least one character (from the list provided)
-"""
-        character_names = ", ".join([char["name"] for char in self.characters])
-        full_prompt += f"\nCharacters available: {character_names}"
+        Returns:
+            dict: The parsed JSON object.
 
-        inputs = self.tokenizer(full_prompt, return_tensors="pt")
-        if torch.cuda.is_available():
-            inputs = {k: v.to("cuda") for k, v in inputs.items()}
-            self.text_generator.to("cuda")
+        Raises:
+            ValueError: If no valid object is found or if parsing fails.
+        """
+        print("Print the original genearted content:")
+        print(content + '\n')
+        print("Looking for ```json block with an object...")
+        matches = re.findall(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL)
 
-        with torch.no_grad():
-            outputs = self.text_generator.generate(
-                **inputs,
-                max_length=512,
-                temperature=0.7,
-                pad_token_id=self.tokenizer.eos_token_id,
-                do_sample=True,
-                top_k=50,
+        if not matches:
+            raise ValueError("No JSON object block found.")
+
+        # pick the match which is does not include placeholder
+        block = ""
+        for match in matches:
+            if "{...}" not in match:
+                block = match
+                break
+        print("Raw extracted block:\n" + block)
+
+        # Remove trailing commas before }
+        cleaned = re.sub(r",\s*}", "}", block.strip())
+
+        # Quote unquoted keys (e.g., cover_description_1: → "cover_description_1":)
+        cleaned = re.sub(r'(?<!")(\b\w+\b)(?=\s*:)', r'"\1"', cleaned)
+
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse JSON object.\nError: {e}\nCleaned:\n{cleaned[:300]}")
+
+        if not isinstance(parsed, dict):
+            raise ValueError("Parsed result is not a JSON object.")
+
+        return parsed
+    
+    
+    def call_model(self, messages, model="Gemma-2b-it"):
+        prompt = "\n".join([m["content"] for m in messages])
+
+        if model == "gpt-3.5-turbo":
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY not set.")
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.7, 
+                top_p=0.95,         # samples from top 95% probability mass
+                max_new_tokens=MAX_NEW_OUTPUT_TOKENS,
+            )
+            return response.choices[0].message.content
+
+        elif model == "Gemma-2b-it":
+            tokenizer, model_gemma = get_gemma_tokenizer_n_model()
+            input_ids = tokenizer(prompt, return_tensors="pt").to(model_gemma.device)
+            outputs = model_gemma.generate(
+                **input_ids,
+                do_sample=True, # True result in non-deterministic generation, sampling enabled
+                temperature=0.85, # control randomness (0.7–1.0 range works well)
                 top_p=0.95,
-                num_return_sequences=1,
+                max_new_tokens=MAX_NEW_OUTPUT_TOKENS,
+                repetition_penalty=1.1,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id
+            )
+            generated_output = outputs[0][input_ids["input_ids"].shape[1]:]
+            result = tokenizer.decode(generated_output, skip_special_tokens=True)
+            return result
+
+        else:
+            raise ValueError(f"Unsupported model: {model}")
+        
+    # === Main Story Generator ===
+    def generate_story(self, story_theme, guidance, author_name, model="Gemma-2b-it"):
+        story_sentences = []
+        page_descriptions = []
+
+        system_prompt = (
+            f"You are a storybook writer and illustration assistant.\n"
+            f"Story Theme: {story_theme}\n"
+            f"Guidance: {guidance}\n"
+            f"Each story page should include:\n"
+            "- A toddler-friendly sentence\n"
+            "- An illustration description that builds consistently on prior pages\n"
+            "Be visually detailed with setting, lighting, and character action.\n"
+            "DO NOT use placeholder values like \"...\". Each object must be complete and contain real values.\n"
+        )
+
+        story_prompt = (    "Create a 15-page toddler story. Each page must include:\n"
+        "- story_sentence: a short, toddler-friendly sentence with emotion or dialogue\n"
+        "- page_description: a rich, vivid visual description that matches the story\n\n"
+        "Respond ONLY with a single JSON array (wrapped in one ```json block) containing exactly 15 objects. Each object must include:\n"
+        "- story_sentence\n"
+        "- page_description\n\n"
+        "Template of the returned JSON array:\n"
+        """
+        ```json
+        [
+        { "story_sentence": "real text", "page_description": "real description" },
+        14 more objects like this (total 15)
+        ]\n
+        ```
+        """
+        """Both "story_sentence" and "page_description" have max length of 65 tokens.\n"""
+        "DO NOT include:\n"
+        "- formatting examples or placeholder text\n"
+        "- any ellipses like '...', or comments like '// more'\n"
+        "- input prompt, explanations, commentary, or multiple code blocks\n"
+        "- truncated arrays — ensure all 15 objects are fully generated with real content.\n\n"
+        # "Start your response directly with:\n```json\n["
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": story_prompt}
+        ]
+
+        content = self.call_model(messages)
+        print("Model output (batch):\n" + content)
+
+        pages_data = self.extract_pagewise_json_objects(content)
+
+        if not isinstance(pages_data, list):
+            raise ValueError("Expected a list of JSON objects for pages.")
+        
+        cleaned_pages = []
+        for i, item in enumerate(pages_data):
+            if "..." in item.get("story_sentence", "") or "..." in item.get("page_description", ""):
+                print(f" Skipping page {i+1} due to placeholder: {item}")
+                continue
+            cleaned_pages.append(item)
+
+        pages_data = cleaned_pages
+
+        story_sentences = [item["story_sentence"].strip() for item in pages_data]
+        page_descriptions = [item["page_description"].strip() for item in pages_data]
+
+        # === Generate Cover Descriptions ===
+        cover_prompt = (
+            f"Based on the story theme and guidance, generate 2 illustration descriptions for the book covers:\n"
+            f"1. cover_description_1: Eye-catching cover for children’s book including author name: {author_name}\n"
+            f"2. cover_description_2: A second cover with warm pastel background and main character in corner.\n"
+            f"Include text: 'Author: {author_name}' and 'Illustrated by: {author_name}, assisted by GenAI'\n"
+            "Return a JSON object with keys: cover_description_1, cover_description_2 wrapped in one ```json block."
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": cover_prompt}
+        ]
+
+        content = self.call_model(messages)
+        cover_result = self.extract_one_json_object(content)
+
+        if not isinstance(cover_result, dict):
+            raise ValueError("Expected a JSON object for cover descriptions.")
+
+        cover_description_1 = cover_result["cover_description_1"].strip()
+        cover_description_2 = cover_result["cover_description_2"].strip()
+
+        return story_sentences, page_descriptions, cover_description_1, cover_description_2
+    
+
+    def generate_story_versions(self, num_versions: int = 3):
+        session_id = datetime.now().strftime("session_%Y%m%d_%H%M%S")
+        output_dir = Path("story_collection") / session_id
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"Generating {num_versions} story versions for session: {session_id}")
+
+        for i in range(1, num_versions + 1):
+            print(f"\n--- Generating version {i} ---")
+            # try:
+            story_sentences, page_descriptions, cover1, cover2 = self.generate_story(
+                story_theme=self.config["story_theme"],
+                guidance=self.config["guidance"],
+                author_name=self.config["author_name"],
+                model=self.model
             )
 
-        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            # Create a summary from the first and last sentence
+            summary = {
+                "summary": {
+                    "beginning": story_sentences[0],
+                    "ending": story_sentences[-1],
+                    "page_count": len(story_sentences)
+                }
+            }
 
-        # Remove the prompt from the output
-        if full_prompt.strip() in generated_text:
-            generated_text = generated_text.replace(full_prompt.strip(), "").strip()
+            output_data = {
+                "cover_description_1": cover1,
+                "cover_description_2": cover2,
+                "story_sentences": story_sentences,
+                "page_descriptions": page_descriptions,
+                **summary
+            }
 
-        return self.parse_page_response(generated_text)
+            with open(output_dir / f"version_{i}.json", "w", encoding="utf-8") as f:
+                json.dump(output_data, f, indent=2, ensure_ascii=False)
+            print(f"✅ Saved version {i} to {output_dir / f'version_{i}.json'}")
 
+            # except Exception as e:
 
-    def generate_story_versions(self) -> List[Dict[str, Any]]:
-        """Generate multiple story versions"""
-        print(" Generating story versions...")
+            #     print(f"❌ Failed to generate version {i}: {e}")
 
-        versions = []
-        num_versions = self.config["story_config"]["versions_to_generate"]
-
-        for i in range(num_versions):
-            print(f" Creating story version {i+1}/{num_versions}")
-
-            story_data = self.create_story_version(version_num=i+1)
-            versions.append(story_data)
-
-            # Save individual version
-            version_file = self.output_dir / f"story_v{i+1}.json"
-            with open(version_file, 'w') as f:
-                json.dump(story_data, f, indent=2)
-
-        # Save versions summary
-        self.save_versions_summary(versions)
-        return versions  
-    
-    
-    def create_story_version(self, version_num: int) -> Dict[str, Any]:
-        """Create a single story version"""
-        # Build character-aware prompt
-        prompt = self.build_story_prompt(version_num)
-
-        # Generate story pages
-        pages = []
-        for page_num in range(1, self.config["story_config"]["pages"] + 1):
-            page_content = self.generate_page_content(prompt, page_num)
-            pages.append({
-                "page_number": page_num,
-                "story_text": page_content["text"],
-                "image_description": page_content["image_desc"],
-                "characters_metioned": page_content["characters"]
-            })
-
-        return {
-            "version": version_num,
-            "title": self.config["title"],
-            "subtitle": self.config["subtitle"],
-            "author": self.config["author_name"],
-            "theme": self.config["story_theme"],
-            "pages": pages,
-            "characters_used": [char["name"] for char in self.characters]
-        }
-    
-    def build_story_prompt(self, version_num: int) -> str:
-        """Build character-aware story generation prompt"""
-
-        character_descriptions = "\n".join([
-            f"- {char['name']}: {char['description']} (Personality: {char['personality']})"
-            for char in self.characters
-        ])
-
-        prompt = f"""
-Create a {self.config['story_config']['pages']}-page children's story with the following specifications:
-
-STORY DETAILS:
-- Title: {self.config['title']}
-- Subtitle: {self.config['subtitle']}
-- Theme: {self.config['story_theme']}
-- Guidance: {self.config['guidance']}
-
-CHARACTERS TO USE:
-{character_descriptions}
-
-REQUIREMENTS:
-- Each page should have 1-2 sentences suitable for children
-- Include character interactions and development
-- Maintain consistency with character personalities
-- Version {version_num} should have a unique narrative approach
-- Include image descriptions for each page
-
-Please ensure the story is engaging, age-appropriate, and showcases all the characters.
-"""
-        return prompt 
-
-    def save_versions_summary(self, versions: List[Dict[str, Any]]):
-        """Save a summary file containing metadata for all story versions"""
-        summary = []
-
-        for version in versions:
-            summary.append({
-                "version": version["version"],
-                "title": version["title"],
-                "subtitle": version["subtitle"],
-                "theme": version["theme"],
-                "characters_used": version["characters_used"],
-                "page_count": len(version["pages"])
-            })
-
-        summary_path = self.output_dir / "story_versions_summary.json"
-        with open(summary_path, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
-
-        print(f"Saved version summary to: {summary_path}")
 
 if __name__ == "__main__":
     agent = PixieStoryAgent()
