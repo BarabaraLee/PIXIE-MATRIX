@@ -95,12 +95,21 @@ class PixieStoryAgent:
 
         full_prompt = f"""{prompt}
 
-    Now write page {page_num} of the story.
-    Respond in this format:
-    story_text: <1-2 sentence story>
-    image_desc: <brief image description>
-    characters: <comma-separated character names>
-    """
+Write page {page_num} of the story.
+
+Format your response *exactly* like this (no extra words):
+
+story_text: <one or two sentences of child-friendly story content>
+image_desc: <one sentence describing what to illustrate>
+characters: <comma-separated list of character names mentioned on this page>
+
+Make sure:
+- All three fields are present
+- image_desc is unique and visually descriptive
+- characters field includes at least one character (from the list provided)
+"""
+        character_names = ", ".join([char["name"] for char in self.characters])
+        full_prompt += f"\nCharacters available: {character_names}"
 
         inputs = self.tokenizer(full_prompt, return_tensors="pt")
         if torch.cuda.is_available():
