@@ -74,12 +74,9 @@ class CharacterAwareLoRAGenerator:
         ).to("cpu")
 
         # Inject LoRA
-        path = os.path.expanduser("~/.cache/huggingface/lora-bulldog")
-        pipe.load_lora_weights(
-            path,
-            weight_name="pytorch_lora_weights.safetensors",  # or whatever your file is called
-            local_files_only=True
-        )
+        # Manually save in this location your trained and downloaded LoRa given lambdalabs/pokemon-blip-captions
+        lora_path = "lora/alice_atley"  
+        pipe.load_lora_weights(lora_path)
         self.pipeline = pipe
 
     def canny_edge_map(self, image: np.ndarray) -> np.ndarray:
