@@ -74,8 +74,12 @@ class CharacterAwareLoRAGenerator:
         ).to("cpu")
 
         # Inject LoRA
-        lora_path = "lora"  # Replace with your real LoRA repo
-        pipe.load_lora_weights(lora_path)
+        path = os.path.expanduser("~/.cache/huggingface/lora-bulldog")
+        pipe.load_lora_weights(
+            path,
+            weight_name="pytorch_lora_weights.safetensors",  # or whatever your file is called
+            local_files_only=True
+        )
         self.pipeline = pipe
 
     def canny_edge_map(self, image: np.ndarray) -> np.ndarray:
