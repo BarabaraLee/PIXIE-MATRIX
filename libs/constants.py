@@ -10,3 +10,6 @@ NEGATIVE_PROMPT = (
 GUIDANCE_SCALE = 10
 IMAGE_STYLE = "Watercolor"
 MAX_NEW_OUTPUT_TOKENS = 4096  # Maximum tokens for model output
+
+DO_SAMPLE=False # Deterministic Story Generation
+NUM_VERSIONS=1

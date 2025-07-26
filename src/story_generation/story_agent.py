@@ -1,5 +1,5 @@
 import json 
-from libs.constants import MAX_NEW_OUTPUT_TOKENS
+from libs.constants import DO_SAMPLE, MAX_NEW_OUTPUT_TOKENS, NUM_VERSIONS
 from libs.utils import get_gemma_tokenizer_n_model
 from pathlib import Path 
 from typing import List, Dict, Any 
@@ -8,7 +8,10 @@ import os
 from datetime import datetime
 
 class PixieStoryAgent:
-    """Generate multiple story versions with character awareness"""
+    """Generate multiple story versions with character awareness
+    TODO: Improve prompt to create better stories (more diverse and making sense).
+    
+    """
 
     def __init__(self, config_path: str="src/config/book_config.json"):
         self.config = self.load_config(config_path)
@@ -154,9 +157,9 @@ class PixieStoryAgent:
             input_ids = tokenizer(prompt, return_tensors="pt").to(model_gemma.device)
             outputs = model_gemma.generate(
                 **input_ids,
-                do_sample=True, # True result in non-deterministic generation, sampling enabled
-                temperature=0.85, # control randomness (0.7–1.0 range works well)
-                top_p=0.95,
+                do_sample=DO_SAMPLE, # True result in non-deterministic generation, sampling enabled
+                # temperature=0.85, # control randomness (0.7–1.0 range works well)
+                # top_p=0.95,
                 max_new_tokens=MAX_NEW_OUTPUT_TOKENS,
                 repetition_penalty=1.1,
                 pad_token_id=tokenizer.eos_token_id,
@@ -185,7 +188,7 @@ class PixieStoryAgent:
             "DO NOT use placeholder values like \"...\". Each object must be complete and contain real values.\n"
         )
 
-        story_prompt = (    "Create a 15-page toddler story. Each page must include:\n"
+        story_prompt = (    "Create a 15 page toddler story. Each page must include:\n"
         "- story_sentence: a short, toddler-friendly sentence with emotion or dialogue\n"
         "- page_description: a rich, vivid visual description that matches the story\n\n"
         "Respond ONLY with a single JSON array (wrapped in one ```json block) containing exactly 15 objects. Each object must include:\n"
@@ -196,7 +199,7 @@ class PixieStoryAgent:
         ```json
         [
         { "story_sentence": "real text", "page_description": "real description" },
-        14 more objects like this (total 15)
+        14 more objects like this
         ]\n
         ```
         """
@@ -205,7 +208,8 @@ class PixieStoryAgent:
         "- formatting examples or placeholder text\n"
         "- any ellipses like '...', or comments like '// more'\n"
         "- input prompt, explanations, commentary, or multiple code blocks\n"
-        "- truncated arrays — ensure all 15 objects are fully generated with real content.\n\n"
+        "- truncated arrays — ensure all 15 objects are fully generated with real content.\n"
+        "Ensure there are 15 pages' text content in total. \n\n"
         # "Start your response directly with:\n```json\n["
         )
 
@@ -298,11 +302,7 @@ class PixieStoryAgent:
                 json.dump(output_data, f, indent=2, ensure_ascii=False)
             print(f"✅ Saved version {i} to {output_dir / f'version_{i}.json'}")
 
-            # except Exception as e:
-
-            #     print(f"❌ Failed to generate version {i}: {e}")
-
 
 if __name__ == "__main__":
     agent = PixieStoryAgent()
-    agent.generate_story_versions()
+    agent.generate_story_versions(NUM_VERSIONS)
