@@ -1,3 +1,22 @@
+"""
+Multi-Version Story Generator for PIXIE-MATRIX
+
+This module defines the PixieStoryAgent class, which automates the generation of 
+multiple toddler-friendly story versions with character and illustration awareness.
+
+Key functionalities:
+- Loads book configuration and registered characters
+- Uses a language model (Gemma or GPT) to generate:
+  - Page-level story sentences and illustration descriptions
+  - Cover illustration prompts
+- Cleans and validates generated JSON outputs
+- Saves results in the 'story_collection' folder with versioned files
+
+Used to power the narrative and visual alignment of PIXIE-MATRIX storybooks.
+
+Local run under mixie-matrix folder with: python3 -m src.story_generation.story_agent
+"""
+
 import json 
 from libs.constants import DO_SAMPLE, MAX_NEW_OUTPUT_TOKENS, NUM_VERSIONS
 from libs.utils import get_gemma_tokenizer_n_model
@@ -6,11 +25,10 @@ from typing import List, Dict, Any
 import re
 import os
 from datetime import datetime
+import OpenAI 
 
 class PixieStoryAgent:
-    """Generate multiple story versions with character awareness
-    TODO: Improve prompt to create better stories (more diverse and making sense).
-    
+    """Generate multiple story versions with character awareness    
     """
 
     def __init__(self, config_path: str="src/config/book_config.json"):

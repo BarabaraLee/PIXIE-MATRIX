@@ -1,6 +1,6 @@
 {
-  "session_id": "session_20250725_050747",
-  "created_at": "20250725_050747",
+  "session_id": "session_20250725_051100",
+  "created_at": "20250725_051100",
   "characters": [
     {
       "name": "Alice",
@@ -9,9 +9,11 @@
       "appearance": "Full-body cute yellow cartoon kitten, standing pose",
       "personality": "friendly",
       "additional_notes": "",
-      "image_versions": "1",
-      "final_image": "character_collection/session_20250725_053829/Alice.png",
-      "created_at": "2025-07-25T05:44:15.166728"
+      "image_versions": [
+        "character_collection/session_20250725_051100/Alice.png"
+      ],
+      "final_image": "character_collection/session_20250725_051100/Alice.png",
+      "created_at": "2025-07-26T09:39:28.530926"
     },
     {
       "name": "Atley",
@@ -20,9 +22,11 @@
       "appearance": "full-body brown color, standing pose",
       "personality": "playful",
       "additional_notes": "",
-      "image_versions": "1",
-      "final_image": "character_collection/session_20250725_053829/Atley.png",
-      "created_at": "2025-07-25T05:57:07.554570"
+      "image_versions": [
+        "character_collection/session_20250725_051100/Atley.png"
+      ],
+      "final_image": "character_collection/session_20250725_051100/Atley.png",
+      "created_at": "2025-07-26T09:39:28.531578"
     }
   ]
 }

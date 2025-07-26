@@ -1,12 +1,20 @@
 """
-Character Generation Agent System
+CharacterGeneratorAgent: Interactive Character Design for Storybooks
 
-An intelligent agent system that helps users create story characters through
-an interactive process involving character specification, image generation,
-feedback collection, and iterative refinement.
+This module defines the CharacterGeneratorAgent class, which helps users create storybook characters 
+with visual and descriptive consistency. It supports both interactive and AI-assisted workflows using 
+local Stable Diffusion and Gemma models.
+
+Key functionalities:
+- Collects user input or suggests character metadata from a language model
+- Generates multiple image versions using Stable Diffusion
+- Allows iterative refinement through user feedback
+- Saves character metadata and image versions in timestamped sessions
+- Supports reuse and integration with story generation and illustration pipelines
+
+Part of the PIXIE-MATRIX system for AI-assisted children's book creation.
 
 Local run under mixie-matrix folder with: python3 -m src.character_generation.character_agent
-
 """
 
 import os 
@@ -17,6 +25,8 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass, asdict 
 import logging
 from libs.constants import NEGATIVE_PROMPT, NUM_INF_STEPS, GUIDANCE_SCALE
+from pathlib import Path
+import os
 
 from libs.utils import get_gemma_tokenizer_n_model
 
@@ -52,30 +62,39 @@ class Character:
 class CharacterGeneratorAgent:
     """Main agent class for character generation with local model support"""
 
-    def __init__(self):
-        """Initialize the character generator agent"""
-        self.now = datetime.now().strftime('%Y%m%d_%H%M%S')
+    def __init__(self, session_path: Optional[str] = None):
+        """Initialize the character generator agent.
+        
+        If session_path is provided, reuse that character session.
+        Otherwise, create a new session based on current timestamp.
+        """
         self.characters: List[Character] = []
         self.character_folder = "character_collection"
-        self.session_folder = f"session_{self.now}"
-        self.working_folder = os.path.join(self.character_folder, self.session_folder)
 
-        # Create directories 
-        os.makedirs(self.working_folder, exist_ok=True)
+        if session_path:
+            self.working_folder = Path(session_path)
+            self.session_folder = self.working_folder.name
+            self.now = self.session_folder.replace("session_", "")
+        else:
+            self.now = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.session_folder = f"session_{self.now}"
+            self.working_folder = Path(self.character_folder) / self.session_folder
+            os.makedirs(self.working_folder, exist_ok=True)
 
         # Initialize image generation method
-        self.image_generator = None 
-        self.generator_type = None 
+        self.image_generator = None
+        self.generator_type = None
         self.generator_type = "demo"
 
         # Try setup local models
-        try: 
+        try:
             self.setup_local_models()
             self.generator_type = "local_models"
             print("Local models (SD + Gemma) configured")
         except Exception as e:
             print(f"Failed to load local models: {e}")
             raise Exception("Local models failed to initialize")
+
         
     def setup_local_models(self):
         """Setup local Stable Diffusion and Gemma models"""
@@ -482,6 +501,42 @@ class CharacterGeneratorAgent:
             json.dump(session_data, f, indent=2)
 
         print(f"Session data saved to: {json_path}")
+
+
+    def suggest_metadata_for_character(self, name: str, story_context: dict) -> Dict[str, str]:
+        """Use local Gemma to generate metadata for a character"""
+        prompt = f"""
+    You are helping design characters for a children's storybook.
+    The story theme is: "{story_context['theme']}"
+    The visual guidance is: "{story_context['guidance']}"
+
+    Please create a detailed character profile for a character named "{name}". 
+    Provide the following fields:
+    - character_type (e.g., cat, dog, dragon)
+    - gender (male/female/neutral)
+    - appearance (visual traits that can guide image generation)
+    - personality (short phrase)
+    - additional_notes (optional backstory or traits)
+
+    Output the result as JSON.
+    """
+        try:
+            raw_output = self.generate_story_with_local_gemma(prompt, max_length=1024)
+
+            # Try extracting JSON if it appears inline
+            try:
+                start = raw_output.index('{')
+                end = raw_output.rindex('}') + 1
+                json_str = raw_output[start:end]
+                return json.loads(json_str)
+            except Exception:
+                print("Failed to parse structured output. Showing fallback text:")
+                print(raw_output)
+                return {}
+
+        except Exception as e:
+            print(f"Metadata generation failed: {e}")
+            return {}
 
 
 def main():
