@@ -1,4 +1,4 @@
 .env
-toddlerbook_chatgpt_draft_code/
-stable-diffusion-v1-5-local/
+toddlerbook_chatgpt_draft_code/*
+stable-diffusion-v1-5-local/*
 gemma-2b-it-96988410cbdaeb8d5093d1ebdc5a8fb563e02bad'
