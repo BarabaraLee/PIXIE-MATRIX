@@ -3,16 +3,16 @@
   "subtitle": "2. Help when you can.",
   "author_name": "Barbara Lee",
   "story_theme": "The little cat (called Alicaey) noticed Atley had injured his leg, she cared for him with first aid and kept him company until he healed.",
-  "guidance": "Use soft colors and warm tones. The setting is a sunny forest with trees, flowers, and a clear blue sky. The style is whimsical and child-friendly. Atley is a cub bear. Atley's friends are a cat, a dog, a rabbit, and a bird. Each friend should look like their own animal species, not like bears. When they appear together, describe each friend with features unique to their species (e.g., the cat has whiskers, the bird has feathers and wings, etc.). Do not group them as 'the animals' without describing their individual appearances.",
+  "guidance": "soft colors warm tones. sunny forest with trees, flowers. Style is whimsical. Alicaeyis a orange color kitten, Atley is a cub brown bear. ",
   "sketch_map": {},
   "main_characters": ["Atley", "Alicaey"],
   "character_appearances": {
-    "Atley": "brown color",
-    "Aliceay": "yellow color"
+    "Atley": "brown",
+    "Aliceay": "orange"
   },
   "character_config": {
     "max_characters": 5,
-    "character_style": "cartoon, child-friendly",
+    "character_style": "cartoon",
     "character_consistency": true
   },
   "story_config": {

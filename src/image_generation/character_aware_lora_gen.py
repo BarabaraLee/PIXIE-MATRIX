@@ -29,7 +29,7 @@ Usage:
 """
 import json
 import cv2
-from libs.utils import describe_character_appearance, position_words, remove_white_background
+from libs.utils import describe_character_appearance, pose_number, position_words, remove_white_background
 import torch
 import numpy as np
 from PIL import Image
@@ -90,9 +90,10 @@ class CharacterAwareLoRAGenerator:
         edges = cv2.Canny(gray, 100, 200)
         return edges
 
+
     def ask_user_to_select_pose(self, char_name: str) -> str:
         folder = self.character_image_root / char_name
-        images = sorted(folder.glob(f"{char_name}_pose*.png"))
+        images = sorted(folder.glob(f"{char_name}_pose*.png"), key=pose_number)
         if not images:
             raise FileNotFoundError(f"No poses found for {char_name} in {folder}")
         print(f"Select pose for character '{char_name}':")
@@ -110,33 +111,51 @@ class CharacterAwareLoRAGenerator:
 
         num_chars = len(mentioned)
         base_scene = (
-            "A detailed storybook illustration in a warm, colorful forest. "
-            f"Sunlight filtering through trees, expressive face{'s' if num_chars>1 else ''}, hand-drawn textures."
+            "sunny, warm colorful forest, water-color textures."
         )
 
         if not mentioned:
             character_part = ""
         elif num_chars == 1:
-            character_part = f"{mentioned[0]} is standing in the scene, looking expressive and engaged."
+            character_part = f"{mentioned[0]} is standing."
         elif num_chars == 2:
-            character_part = f"{mentioned[0]} and {mentioned[1]} are facing each other, showing emotion and connection."
+            character_part = f"{mentioned[0]} and {mentioned[1]} are facing each other."
         else:
             names = ", ".join(mentioned[:-1]) + f", and {mentioned[-1]}"
-            character_part = f"{names} are gathered together, each with unique posture and expression."
+            character_part = f"{names} are together"
 
         return f"{desc}. {base_scene} {character_part}"
 
 
     def generate_images(self):
+        import json
+        from pathlib import Path
+
+        intermediate_path = Path("src/intermediate_results")
+        pose_json_path = intermediate_path / "character_order_pose.json"
         pose_data = {}
 
+        # Try loading existing JSON
+        if pose_json_path.exists():
+            try:
+                with open(pose_json_path, 'r', encoding='utf-8') as f:
+                    pose_data = json.load(f)
+                    print("Loaded existing character_order_pose.json. Will reuse pose/order data where possible.")
+            except Exception as e:
+                print(f"⚠️ Failed to read existing character_order_pose.json: {e}")
+
         # Phase 1: Collect pose selections from user
-        for idx, desc in enumerate(self.story["page_descriptions"], 1):
+        for idx, desc in enumerate(self.story["story_descriptions"], 1):
             mentioned = self.get_mentioned_characters(desc)
             if not mentioned:
                 continue
 
             page_key = f"page_{idx:02d}"
+
+            if page_key in pose_data:
+                print(f"✅ Skipping input for {page_key}, already present in character_order_pose.json")
+                continue
+
             pose_data[page_key] = {}
 
             print(f"\n * Page {idx} Story Description:\n{desc}\n")
@@ -162,8 +181,18 @@ class CharacterAwareLoRAGenerator:
                 pose_path = self.ask_user_to_select_pose(char)
                 pose_data[page_key][char] = pose_path
 
+        # Archive old pose JSONs
+        i = 1
+        while (intermediate_path / f"character_order_pose{i}.json").exists():
+            i += 1
+        if pose_json_path.exists():
+            pose_json_path.rename(intermediate_path / f"character_order_pose{i}.json")
+        with open(pose_json_path, 'w', encoding='utf-8') as f:
+            json.dump(pose_data, f, indent=2)
+            print(f"✅ Updated character_order_pose.json with new entries")
+
         # Phase 2: Generate images
-        for idx, (_, desc) in enumerate(zip(self.story["story_sentences"], self.story["page_descriptions"]), 1):
+        for idx, (_, desc) in enumerate(zip(self.story["story_sentences"], self.story["story_descriptions"]), 1):
             mentioned = self.get_mentioned_characters(desc)
             page_key = f"page_{idx:02d}"
             if not mentioned or page_key not in pose_data:
@@ -181,7 +210,7 @@ class CharacterAwareLoRAGenerator:
             canny = self.canny_edge_map(control_image[:, :, :3])
             canny_pil = Image.fromarray(canny).convert("RGB")
 
-            layout_hint = ", ".join([f"{name} is on the {pos}" for name, pos in zip(
+            layout_hint = ", ".join([f"{name} {pos}" for name, pos in zip(
                 mentioned,
                 position_words(len(mentioned))
             )]) + ". " if len(mentioned) > 1 else ""
@@ -191,7 +220,7 @@ class CharacterAwareLoRAGenerator:
 
             image = self.pipeline(
                 prompt=prompt,
-                negative_prompt=negative_background_hint + NEGATIVE_PROMPT,
+                negative_prompt= negative_background_hint + NEGATIVE_PROMPT,
                 image=canny_pil,
                 num_inference_steps=NUM_INF_STEPS,
                 guidance_scale=GUIDANCE_SCALE,
@@ -204,24 +233,33 @@ class CharacterAwareLoRAGenerator:
             print(f" Saved {out_path}")
 
 
-
     def get_mentioned_characters(self, desc: str) -> List[str]:
         desc = desc.lower()
         return [name for name in self.characters if name.lower() in desc]
 
 
+
     def create_control_image(self, images: List[np.ndarray]) -> np.ndarray:
         # Create a transparent RGBA canvas
-        canvas = np.zeros((HEIGHT, WIDTH, 4), dtype=np.uint8)  # RGBA canvas (transparent)
+        canvas = np.zeros((HEIGHT, WIDTH, 4), dtype=np.uint8)
 
         num_images = len(images)
-        target_height = HEIGHT // 4  # each character ~¼ of the image height
-        gap = WIDTH // (num_images + 1)
-        current_x = gap
-        midpoint = num_images // 2
+        target_height = int(HEIGHT * 0.6)  # character height
+
+        positions_x = []
+        if num_images == 1:
+            positions_x = [WIDTH // 2]
+        elif num_images == 2:
+            positions_x = [int(WIDTH * 0.25), int(WIDTH * 0.75)]
+        else:
+            # Spread characters evenly across the width, avoiding edges
+            margin = int(WIDTH * 0.1)
+            step = (WIDTH - 2 * margin) // (num_images - 1)
+            positions_x = [margin + i * step for i in range(num_images)]
 
         for i, img in enumerate(images):
-            # Flip to have characters face inward
+            # Flip image if needed for inward-facing layout
+            midpoint = num_images // 2
             if num_images >= 2:
                 if (num_images % 2 == 0 and i < midpoint) or (num_images % 2 == 1 and i < midpoint):
                     img = cv2.flip(img, 1)
@@ -229,30 +267,32 @@ class CharacterAwareLoRAGenerator:
             # Resize to target height while preserving aspect ratio
             h, w = img.shape[:2]
             scale = target_height / h
-            new_w, new_h = int(w * scale), int(h * scale)
+            new_w = max(1, int(w * scale))
+            new_h = max(1, int(h * scale))
             resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-            # Compute vertical placement (centered)
+            # Compute top-left coordinates (centered horizontally)
+            x_center = positions_x[i]
+            x_offset = max(0, min(WIDTH - new_w, x_center - new_w // 2))
             y_offset = (HEIGHT - new_h) // 2
 
-            # Paste with alpha blending
+            # Ensure paste area is within canvas bounds
+            if x_offset + new_w > WIDTH or y_offset + new_h > HEIGHT:
+                print(f"⚠️ Skipping character {i} due to size overflow")
+                continue
+
             alpha = resized[:, :, 3] / 255.0
-            for c in range(3):  # RGB only
-                canvas[y_offset:y_offset+new_h, current_x:current_x+new_w, c] = (
+            for c in range(3):
+                canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w, c] = (
                     alpha * resized[:, :, c] +
-                    (1 - alpha) * canvas[y_offset:y_offset+new_h, current_x:current_x+new_w, c]
+                    (1 - alpha) * canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w, c]
                 )
-            # Set alpha channel
-            canvas[y_offset:y_offset+new_h, current_x:current_x+new_w, 3] = (
-                np.maximum(canvas[y_offset:y_offset+new_h, current_x:current_x+new_w, 3], resized[:, :, 3])
+            canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w, 3] = (
+                np.maximum(canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w, 3], resized[:, :, 3])
             )
 
-            current_x += new_w + gap
-
-        # Convert RGBA → RGB for Canny/Stable Diffusion
         rgb_canvas = cv2.cvtColor(canvas, cv2.COLOR_BGRA2BGR)
         return rgb_canvas
-
 
     
     def generate_covers(self):

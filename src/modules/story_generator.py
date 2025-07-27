@@ -20,6 +20,7 @@ def extract_pagewise_json_objects(content: str) -> list:
     and returns them as a list of dictionaries.
     """
     logger.info("Looking for individual ```json { ... } ``` blocks...")
+    logger.info(f"Content: {content}")
     
     # Match each JSON object inside a ```json code block
     matches = re.findall(r"```json\s*({.*?})\s*```", content, re.DOTALL)
@@ -154,7 +155,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     #     "Create a 15-page toddler story. "
     #     "Return ONLY a single JSON array (15 elements), wrapped in a single ```json block.\n"
     #     "If there's a name mentioned in the title of this book, please create a story of this animal.\n"
-    #     "Remember each generated sentence of the story book should include conversation and thoughts, not pure description.\n"
+    #     "Remember each generated sentence of the storybook should include conversation and thoughts, not pure description.\n"
     #     "Do NOT output separate blocks for each page.\n"
     #     "Format:\n```json\n[\n  { \"story_sentence\": \"...\", \"page_description\": \"...\" },\n  ...\n]\n```"
     # )
@@ -174,18 +175,17 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     story_prompt = (    "Create a 15-page toddler story. Each page must include:\n"
     "- story_sentence: a short, toddler-friendly sentence with emotion or dialogue\n"
     "- page_description: a rich, vivid visual description that matches the story\n\n"
-    "Respond ONLY with a single JSON array (wrapped in one ```json block) containing exactly 15 objects. Each object must include:\n"
+    "Respond ONLY with 15 ```json blocks containing info for 15 story pages. Each json object must include:\n"
     "- story_sentence\n"
     "- page_description\n\n"
-    "Template of the returned JSON array:\n"
+    "Template of JSON object:\n"
     """
     ```json
-    [
-    { "story_sentence": "real text", "page_description": "real description" },
-    14 more objects like this (total 15)
-    ]\n
+    { "story_sentence": "real text", "page_description": "real description" }
+    ``` 
     """
-    """Both "story_sentence" and "page_description" have max length of 65 tokens.\n"""
+    '"story_sentence" have max length of 30 tokens.\n'
+    '""page_description" have max length of 30 tokens.\n'
     "DO NOT include:\n"
     "- formatting examples or placeholder text\n"
     "- any ellipses like '...', or comments like '// more'\n"
@@ -222,7 +222,7 @@ def generate_story(story_theme, guidance, author_name, model="gemma-2b"):
     # === Generate Cover Descriptions ===
     cover_prompt = (
         f"Based on the story theme and guidance, generate 2 illustration descriptions for the book covers:\n"
-        f"1. cover_description_1: Eye-catching cover for children’s book including author name: {author_name}\n"
+        f"1. cover_description_1: Eye-catching cover for storybook including author name: {author_name}\n"
         f"2. cover_description_2: A second cover with warm pastel background and main character in corner.\n"
         f"Include text: 'Author: {author_name}' and 'Illustrated by: {author_name}, assisted by GenAI'\n"
         "Return a JSON object with keys: cover_description_1, cover_description_2 wrapped in one ```json block."

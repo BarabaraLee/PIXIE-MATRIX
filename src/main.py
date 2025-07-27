@@ -6,7 +6,6 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "modules")))
 
 from modules.story_generator import generate_story
-from modules.illustration_generator import generate_illustrations
 from modules.text_placer import place_text_on_images, place_titles_authors_on_covers
 from modules.epub_assembler import assemble_epub
 from transformers.utils import logging
@@ -65,22 +64,15 @@ def main():
         logger.info(f"Generated story sentences: {story_sentences}")
         logger.info(f"Generated page descriptions: {page_descriptions}")
 
-        # Step 2: Generate illustrations
-        e2e_story_sents = [cover_description_1, cover_description_2] + page_descriptions
-        illustrations = generate_illustrations(
-            e2e_story_sents,
-            model="huggingface-SDXL",
-            sketch_map=sketch_map,
-            title=title
-        )
-
         # Save all results to intermediate file
         intermediate = {
-            "story_sentences": story_sentences,
-            "illustrations": illustrations,
             "title": title,
             "author_name": author_name,
-            "subtitle": subtitle
+            "subtitle": subtitle,
+            "cover_description_1": cover_description_1,
+            "cover_description_2": cover_description_2,
+            "story_sentences": story_sentences,
+            "story_descriptions": page_descriptions
         }
         save_intermediate(args.intermediate_file, intermediate)
         logger.info(f"Saved intermediate results to {args.intermediate_file}")

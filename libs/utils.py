@@ -11,6 +11,7 @@ import numpy as np
 from typing import List
 import json
 from pathlib import Path
+import re
 
 
 logging.basicConfig(level=logging.INFO)
@@ -84,8 +85,8 @@ def describe_character_appearance(names: List[str]) -> str:
         {
         "main_characters": ["Atley", "Aliceay"],
         "character_appearances": {
-            "Atley": "brown color",
-            "Aliceay": "yellow color"
+            "Atley": "brown",
+            "Aliceay": "orange"
         },
         ...
         }
@@ -98,7 +99,7 @@ def describe_character_appearance(names: List[str]) -> str:
 
     appearance_dict = config.get("character_appearances", {})
     appearance_hint = " ".join([
-        f"{name} is {appearance_dict.get(name, 'a character')}."
+        f"{name} has {appearance_dict.get(name, 'a character')} fur, black eye"
         for name in names
     ])
 
@@ -106,6 +107,14 @@ def describe_character_appearance(names: List[str]) -> str:
         [x.replace("color", "") for x in appearance_dict.values()] 
         )
     # this is to reduce hallucination on background color
-    negative_background_hint =  f"{color_str} background color, "
+    negative_background_hint =  f"{color_str} leaves, {color_str} sky, {color_str} water, "
+
+    logger.info(f"appearance_prompt_hint: {appearance_hint}")
+    logger.info(f"negative_background_hint: {negative_background_hint}")
 
     return appearance_hint, negative_background_hint
+
+
+def pose_number(path):
+    match = re.search(r"_pose(\d+)(?=\.[a-zA-Z]+$)", path.name)
+    return int(match.group(1)) if match else float("inf")

@@ -1,13 +1,14 @@
-HEIGHT = 768 # 1536 
-WIDTH = 1152 # 1024
+HEIGHT = 512 # 1536 
+WIDTH = 768 # 1024
 
 NUM_INF_STEPS = 30
 NUM_IMAGES = 2
 NEGATIVE_PROMPT = (
-    "blurry, bad anatomy, malformed limbs, missing or extra fingers, extra eyes, twisted faces, poor proportions, unrealistic, creepy, "
-    "nsfw, violent, animal-human hybrid, animals wearing clothes, glitches, watermark, text, cluttered, chaotic, unnatural lighting, "
-    "wrong object count, disorganized, poor composition, monochrome, weird colors, letters, nudity, human, human body parts"
-)
+"blurry, bad anatomy, malformed limbs, missing or extra fingers, extra eyes, "
+"poor proportions, unrealistic, nsfw, violent, animal-human hybrid, animals in clothes, "
+"glitch, watermark, text, cluttered, chaotic, unnatural light, wrong object count, disorganized, "
+"bad composition, monochrome, weird colors, letters, nudity, human, human limbs, clothing on animal"
+) #twisted face, creepy
 GUIDANCE_SCALE = 9
 IMAGE_STYLE = "Watercolor"
 MAX_NEW_OUTPUT_TOKENS = 4096  # Maximum tokens for model output

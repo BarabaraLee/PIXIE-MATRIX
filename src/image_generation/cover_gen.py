@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from libs.constants import GUIDANCE_SCALE, HEIGHT, NEGATIVE_PROMPT, NUM_INF_STEPS, WIDTH
-from libs.utils import remove_white_background, position_words, describe_character_appearance
+from libs.utils import pose_number, remove_white_background, position_words, describe_character_appearance
 
 def generate_cover_image(prompt: str, character_names: list, pipeline, character_image_root: Path, output_path: Path, layout_order: list = None):
     # Determine which characters are used
@@ -12,7 +12,7 @@ def generate_cover_image(prompt: str, character_names: list, pipeline, character
     selected_images = []
     for char in used_characters:
         folder = character_image_root / char
-        images = sorted(folder.glob(f"{char}_pose*.png"))
+        images = sorted(folder.glob(f"{char}_pose*.png"), key=pose_number)
         if not images:
             raise FileNotFoundError(f"No poses found for {char} in {folder}")
         print(f"Select pose for cover for character '{char}':")
@@ -31,7 +31,7 @@ def generate_cover_image(prompt: str, character_names: list, pipeline, character
     # Create RGBA canvas
     canvas = np.zeros((HEIGHT, WIDTH, 4), dtype=np.uint8)
     num_images = len(selected_images)
-    target_height = HEIGHT // 4
+    target_height = int(HEIGHT * 0.6)
     gap = WIDTH // (num_images + 1)
     current_x = gap
     midpoint = num_images // 2
@@ -43,7 +43,8 @@ def generate_cover_image(prompt: str, character_names: list, pipeline, character
 
         h, w = img.shape[:2]
         scale = target_height / h
-        new_w, new_h = int(w * scale), int(h * scale)
+        new_w = max(1, int(w * scale))
+        new_h = max(1, int(h * scale))
         resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
         y_offset = (HEIGHT - new_h) // 2
 
@@ -70,6 +71,7 @@ def generate_cover_image(prompt: str, character_names: list, pipeline, character
 
     appearance_hint, negative_background_hint = describe_character_appearance(used_characters)
     full_prompt = f"{layout_hint}{appearance_hint} {prompt}"
+    print(full_prompt)
 
     result = pipeline(
         prompt=full_prompt,

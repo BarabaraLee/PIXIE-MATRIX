@@ -1,0 +1,52 @@
+{
+  "page_01": {
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose3.png"
+  },
+  "page_02": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose6.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose8.png"
+  },
+  "page_03": {
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose4.png"
+  },
+  "page_04": {
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose9.png",
+    "Atley": "libs/character_image_lib/Atley/Atley_pose9.png"
+  },
+  "page_05": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose2.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose7.png"
+  },
+  "page_06": {
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose2.png",
+    "Atley": "libs/character_image_lib/Atley/Atley_pose1.png"
+  },
+  "page_07": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose6.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose3.png"
+  },
+  "page_08": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose3.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose5.png"
+  },
+  "page_09": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose5.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose4.png"
+  },
+  "page_10": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose4.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose1.png"
+  },
+  "page_11": {
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose9.png",
+    "Atley": "libs/character_image_lib/Atley/Atley_pose1.png"
+  },
+  "page_12": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose10.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose6.png"
+  },
+  "page_13": {
+    "Atley": "libs/character_image_lib/Atley/Atley_pose2.png",
+    "Alicaey": "libs/character_image_lib/Alicaey/Alicaey_pose8.png"
+  }
+}
