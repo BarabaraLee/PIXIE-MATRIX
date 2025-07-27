@@ -75,8 +75,10 @@ class CharacterAwareLoRAGenerator:
 
         # Inject LoRA
         # Manually save in this location your trained and downloaded LoRa given lambdalabs/pokemon-blip-captions
-        lora_path = "lora/alice_atley"  
-        pipe.load_lora_weights(lora_path)
+        lora_Alicaey_path = "lora/Alicaey"  
+        pipe.load_lora_weights(lora_Alicaey_path)
+        lora_Atley_path = "lora/Atley"
+        pipe.load_lora_weights(lora_Atley_path)
         self.pipeline = pipe
 
     def canny_edge_map(self, image: np.ndarray) -> np.ndarray:
