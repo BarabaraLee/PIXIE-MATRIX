@@ -238,7 +238,7 @@ class PixieImageGenerator:
             title_font = ImageFont.truetype(font_path, 72)
             subtitle_font = ImageFont.truetype(font_path, 48)
             author_font = ImageFont.truetype(font_path, 32)
-        except:
+        except Exception:
             title_font = subtitle_font = author_font = ImageFont.load_default()
 
         def draw_text(image, title, subtitle, author):
