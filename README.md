@@ -1,3 +1,5 @@
+This project generates fully illustrated EPUB storybooks for toddlers using generative AI models (OpenAI GPT, Groq Gemma, Stable Diffusion XL, and ControlNet). You provide a theme and optional character poses, and it outputs a complete, publishable e-book. (in developement)
+
 # 📚 Toddler Storybook Generator
 
 This project generates fully illustrated EPUB storybooks for toddlers using generative AI models (OpenAI GPT, Groq Gemma, Stable Diffusion XL, and ControlNet). You provide a theme and optional character poses, and it outputs a complete, publishable e-book. (under developement)
@@ -54,5 +56,3 @@ TODO:
 
 ## 1. Run all test
 make test
-
-
