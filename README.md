@@ -6,6 +6,10 @@ This project generates fully illustrated EPUB storybooks for toddlers using gene
 
 ## 🚀 How to Run
 
+### 0. Setup virtual environment
+* mac (with cpu only): source env/bin/activate
+* windows (with gpu): source win-env/Scripts/activate
+
 ### 1. Install dependencies
 
 pip install -r requirements.txt
