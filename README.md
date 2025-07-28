@@ -10,6 +10,8 @@ This project generates fully illustrated EPUB storybooks for toddlers using gene
 * mac (with cpu only): source env/bin/activate
 * windows (with gpu): source win-env/Scripts/activate
 
+Makesure python version is at least 3.13.5 before proceeds.
+
 ### 1. Install dependencies
 
 pip install -r requirements.txt
