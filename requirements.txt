@@ -1,3 +1,5 @@
+# for gpu: --extra-index-url https://download.pytorch.org/whl/cu126
+
 openai
 pillow
 requests
@@ -5,7 +7,6 @@ ebooklib
 python-dotenv
 replicate
 groq
-torch
 transformers
 diffusers
 accelerate
@@ -13,10 +14,12 @@ safetensors
 opencv-python
 ruff
 argparse
-torchvision
 ftfy 
-spacy
 protobuf
 tiktoken
 peft
 lfs
+torch # for gpu: torch==2.7.1
+torchvision
+xformers
+# for gpu: controlnet_aux

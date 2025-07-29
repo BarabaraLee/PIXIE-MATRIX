@@ -1,7 +1,4 @@
 {
-  "title": "Alicaey the Kitten",
-  "author_name": "Barbara Lee",
-  "subtitle": "2. Help when you can.",
   "cover_description_1": "A vibrant cover featuring a little cat named Alicaey tending to a wounded cub bear named Atley in a sunny forest. The gentle touch of a kitten and the warmth of a bear create a heartwarming and whimsical scene.",
   "cover_description_2": "A soft and calming cover featuring a little cat named Alicaey surrounded by colorful wildflowers and a smiling cub bear named Atley. The gentle sunlight illuminates the scene, highlighting the warm and inviting atmosphere.",
   "story_sentences": [
@@ -17,23 +14,26 @@
     "She smiled at Atley and said, 'Thank you for being my friend.'",
     "Atley wagged his tail happily and nuzzled Alicaey with his nose.",
     "Alicaey smiled back at Atley and said, 'You're welcome.'",
-    "That day, Alicaey and Atley had a wonderful time together.",
-    "From that day on, Alicaey and Atley were inseparable."
+    "That day, Alicaey and Atley had a wonderful time together."
   ],
   "story_descriptions": [
     "Alicaey sits alone on a log, looking worried.",
     "Alicaey walks over to Atley and smiles warmly.",
     "Alicaey gathers some supplies from her pouch, including a bandage, a tissue, and some toys.",
-    "Alicaey uses the bandage and ointment to clean Atley's leg and apply some soothing cream.",
+    "Alicaey, carefully put a bandage on Atley's leg. Show the bandage",
     "Alicaey sits down next to Atley and starts talking to him in a gentle voice.",
     "Atley hears Alicaey's words and purrs in response.",
     "Alicaey and Atley sit together for a long time, playing and talking.",
-    "The sun begins to set, casting a warm glow on Alicaey and Atley as they rest together.",
-    "Alicaey wakes up and checks on Atley, making sure he's okay.",
+    "The sun begins to set, casting a warm glow on Alicaey and Atley as they fall asleep.",
+    "Alicaey checks on Atley, making sure he's okay.",
     "Alicaey smiles at Atley and says thank you for being her friend.",
     "Atley waggles his tail happily and nuzzles Alicaey with his nose.",
     "Alicaey smiles back at Atley and says, 'You're welcome.'",
-    "That day, Alicaey and Atley had a wonderful time together.",
-    "From that day on, Alicaey and Atley were inseparable."
-  ]
+    "That day, Alicaey and Atley had a wonderful time together."
+  ],
+  "summary": {
+    "beginning": "Alicaey was sad because Atley was hurt.",
+    "ending": "That day, Alicaey and Atley had a wonderful time together.",
+    "page_count": 13
+  }
 }

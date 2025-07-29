@@ -8,7 +8,7 @@
   "main_characters": ["Atley", "Alicaey"],
   "character_appearances": {
     "Atley": "brown",
-    "Aliceay": "orange"
+    "Alicaey": "orange"
   },
   "character_config": {
     "max_characters": 5,

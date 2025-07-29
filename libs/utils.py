@@ -8,7 +8,7 @@ import torch
 import os
 import cv2
 import numpy as np
-from typing import List
+from typing import List, Tuple
 import json
 from pathlib import Path
 import re
@@ -28,18 +28,29 @@ def check_image_type(img):
             logger.error(f"Error opening image file {img}: {e}")
             return None
 
+def cuda_available():
+    return torch.cuda.is_available()
+
+def get_torch_dtype():
+    return torch.float16 if cuda_available() else torch.float32
+
+def get_device_map():
+    return "cuda:0" if cuda_available() else "cpu"
+
+def get_device():
+    cuda_avail =  torch.cuda.is_available()
+    return "cuda:0" if cuda_avail else "cpu"
+
 # === Functions to load model gemma-2b-it  ===
 def get_gemma_tokenizer_n_model():
-
-    cuda_available = torch.cuda.is_available()
     
     # === Load Gemma Model ===
     model_path = os.path.expanduser("~/.cache/huggingface/hub/models--google--gemma-2b-it/snapshots/96988410cbdaeb8d5093d1ebdc5a8fb563e02bad")
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     model_gemma = AutoModelForCausalLM.from_pretrained(
         model_path,
-        torch_dtype=torch.float16,
-        device_map="cpu",
+        torch_dtype=get_torch_dtype(),
+        device_map=get_device_map(),
         local_files_only=True
     )
 
@@ -47,8 +58,8 @@ def get_gemma_tokenizer_n_model():
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     model_gemma = AutoModelForCausalLM.from_pretrained(
         model_path,
-        torch_dtype=torch.float16 if cuda_available else torch.float32,
-        device_map="auto" if cuda_available else "cpu",
+        torch_dtype=get_torch_dtype(),
+        device_map=get_device_map(),
         local_files_only=True
     )
     return tokenizer, model_gemma
@@ -79,40 +90,55 @@ def position_words(n: int) -> List[str]:
         return words
     
 
-def describe_character_appearance(names: List[str]) -> str:
+def describe_character_appearance(names: List[str]) -> Tuple[str, str]:
     """
-    In book_config.json, we have info as follows:
-        {
-        "main_characters": ["Atley", "Aliceay"],
-        "character_appearances": {
-            "Atley": "brown",
-            "Aliceay": "orange"
-        },
-        ...
-        }
-    This function reads info under "character_appearances" which 
-    encode the skin/fur color of the animal.
+    Describe up to 2 characters with left/right layout.
+    Uses tokenizer to ensure prompt fits within SD-1.5's 77-token limit.
     """
+    from pathlib import Path
+    import json
+    import logging
+    from transformers import CLIPTokenizer
+
     config_path = Path("src/config/book_config.json")
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
     appearance_dict = config.get("character_appearances", {})
-    appearance_hint = " ".join([
-        f"{name} has {appearance_dict.get(name, 'a character')} fur, black eye"
-        for name in names
-    ])
+    type_dict = config.get("character_types", {
+        "Alicaey": "kitten",
+        "Atley": "bear cub"
+    })
 
-    color_str = " or ".join( 
-        [x.replace("color", "") for x in appearance_dict.values()] 
-        )
-    # this is to reduce hallucination on background color
-    negative_background_hint =  f"{color_str} leaves, {color_str} sky, {color_str} water, "
+    n = len(names)
+    if n == 1:
+        hints = [f"{names[0]}, a {appearance_dict.get(names[0], 'gray')} {type_dict.get(names[0], 'animal')} with black eyes."]
+    elif n == 2:
+        hints = [
+            f"{names[0]}: a {appearance_dict.get(names[0], 'gray')} {type_dict.get(names[0], 'animal')} with black eyes.",
+            f"{names[1]}: a {appearance_dict.get(names[1], 'gray')} {type_dict.get(names[1], 'animal')} with black eyes."
+        ]
+    else:
+        hints = []
 
-    logger.info(f"appearance_prompt_hint: {appearance_hint}")
-    logger.info(f"negative_background_hint: {negative_background_hint}")
+    # Use CLIP tokenizer to trim
+    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch16")
+    full_hint = " ".join(hints)
+    encoded = tokenizer(full_hint, truncation=True, max_length=77)
+    tokens = encoded["input_ids"]
+    trimmed_hint = tokenizer.decode(tokens, skip_special_tokens=True).strip()
 
-    return appearance_hint, negative_background_hint
+    all_colors = set(appearance_dict.values())
+    all_colors.update([ "gray", "black"])
+    color_str = " or ".join(sorted(all_colors))
+    negative_background_hint = f"{color_str} leaves, {color_str} sky, {color_str} water, "
+
+    # logging.info(f"appearance_prompt_hint: {trimmed_hint}")
+    # logging.info(f"negative_background_hint: {negative_background_hint}")
+
+    # animal_count_hint = f"There should be {n} animal{'s' if n > 1 else ''} in the picture."
+    final_hint = f"{trimmed_hint}".strip()
+    return final_hint, negative_background_hint
 
 
 def pose_number(path):
